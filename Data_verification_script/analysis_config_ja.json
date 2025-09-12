@@ -1,0 +1,84 @@
+{
+  "attributes": [
+    {
+      "name": "性別",
+      "keys": ["gender", "Gender", "性別"],
+      "type": "categorical",
+      "value_key": "Value"
+    },
+    {
+      "name": "年齢_Low",
+      "keys": ["age_range.Low", "AgeRange.Low"],
+      "type": "number"
+    },
+    {
+      "name": "年齢_High",
+      "keys": ["age_range.High", "AgeRange.High"],
+      "type": "number"
+    },
+
+    {
+      "name": "サングラス",
+      "keys": ["sunglasses", "SunGlasses"],
+      "type": "bool"
+    },
+    {
+      "name": "メガネ",
+      "keys": ["eyeglasses", "EyeGlasses"],
+      "type": "bool"
+    },
+    {
+      "name": "ひげ",
+      "keys": ["beard", "Beard"],
+      "type": "bool"
+    },
+    {
+      "name": "口ひげ",
+      "keys": ["mustache", "Mustache"],
+      "type": "bool"
+    },
+    {
+      "name": "口の開閉",
+      "keys": ["mouth_open", "MouthOpen"],
+      "type": "bool",
+      "value_key": "Value"
+    },
+    {
+      "name": "目の開閉",
+      "keys": ["eye_open", "EyesOpen", "EyeOpen"],
+      "type": "bool",
+      "value_key": "Value"
+    },
+    {
+      "name": "笑顔",
+      "keys": ["smile", "Smile"],
+      "type": "bool",
+      "value_key": "Value"
+    },
+    {
+      "name": "バウンディングボックス_高さ",
+      "keys": ["bounding_box.Height", "BoundingBox.Height"],
+      "type": "number"
+    },
+    {
+      "name": "バウンディングボックス_幅",
+      "keys": ["bounding_box.Width", "BoundingBox.Width"],
+      "type": "number"
+    },
+    {
+      "name": "バウンディングボックス_左",
+      "keys": ["bounding_box.Left", "BoundingBox.Left"],
+      "type": "number"
+    },
+    {
+      "name": "バウンディングボックス_上",
+      "keys": ["bounding_box.Top", "BoundingBox.Top"],
+      "type": "number"
+    },
+    {
+      "name": "自信度_顔レベル",
+      "keys": ["confident"],
+      "type": "number"
+    }
+  ]
+}

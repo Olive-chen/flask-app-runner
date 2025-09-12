@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <link rel="icon" href="data:,">
+  <title>データ取得 & 解析（インタラクティブ）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/visuals.js?v={{ rev }}"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(1200px 600px at 15% -10%, rgba(99,102,241,0.28), transparent 60%),
+        radial-gradient(1000px 500px at 110% 0%, rgba(16,185,129,0.22), transparent 60%),
+        linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.02));
+    }
+    .glass {
+      backdrop-filter: blur(12px) saturate(120%);
+      -webkit-backdrop-filter: blur(12px) saturate(120%);
+      background: rgba(255,255,255,0.65);
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: 0 20px 40px rgba(2,6,23,0.08);
+    }
+    .dark .glass { background: rgba(15,23,42,0.5); border-color: rgba(255,255,255,0.10); }
+  </style>
+
+    <style>
+      .gold-bg{position:fixed;inset:0;pointer-events:none;background:
+        radial-gradient(1000px 600px at 15% -10%, rgba(255,214,94,0.28), transparent 60%),
+        radial-gradient(900px 500px at 110% 0%, rgba(255,159,67,0.22), transparent 60%),
+        linear-gradient(180deg, rgba(15,23,42,0.35), rgba(15,23,42,0.55));
+        z-index:-1;}
+    </style>
+    <div class="gold-bg"></div>
+    
+</head>
+<body class="min-h-screen text-white">
+  <div class="max-w-6xl mx-auto px-4 py-6 space-y-5">
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight">データ取得 & 解析（インタラクティブ）<span class="ml-2 text-xs text-slate-400 align-middle">(rev {{ rev }})</span></h1>
+      <div class="flex gap-2">
+        <button id="btn-dark" class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 text-white border border-white/20 hover:bg-white/20">🌙 ダーク</button>
+      </div>
+    </header>
+
+    <div class="flex gap-3">
+      <button id="tab-download" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white shadow hover:bg-blue-700 active:scale-[.99] transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01.88-7.903A5 5 0 1117 9h1a3 3 0 010 6h-2"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 12v9m0 0l-3-3m3 3l3-3"/></svg>
+        <span>① ダウンロード & 解析</span>
+      </button>
+      <button id="tab-analyze" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-700 text-white shadow hover:bg-slate-800 active:scale-[.99] transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 13v5m5-9v9m5-14v14"/></svg>
+        <span>② 解析のみ</span>
+      </button>
+    </div>
+
+    <section id="panel-download" class="glass rounded-2xl p-5 space-y-4">
+      <div class="text-lg font-semibold">① ダウンロード & 解析</div>
+      <div class="grid grid-cols-1 gap-4">
+        <label class="block"><span class="text-sm text-slate-600">ユーザー（DynamoDB）</span><input id="da_user" list="hist_da_user" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_user }}" placeholder="例: azlm-prd-004@01ive.co.jp"></label>
+        <label class="block"><span class="text-sm text-slate-600">会社（Timestream）</span><input id="da_company" list="hist_da_company" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_company }}" placeholder="例: azlm-prd"></label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block"><span class="text-sm text-slate-600">開始時刻</span><input id="da_start" list="hist_da_start" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_start }}"></label>
+          <label class="block"><span class="text-sm text-slate-600">終了時刻</span><input id="da_end" list="hist_da_end" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_end }}"></label>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block"><span class="text-sm text-slate-600">タイムゾーン（既定: 9）</span><input id="da_timezone" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_timezone }}"></label>
+          <label class="block"><span class="text-sm text-slate-600">リージョン</span><input id="da_region" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_region }}"></label>
+        </div>
+        <label class="block"><span class="text-sm text-slate-600">AWS キー CSV（空なら `shibo-chen_accessKeys.csv`）</span><input id="da_keypath" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_keypath }}"></label>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label class="block"><span class="text-sm text-slate-600">Step 秒（例: 10）</span><input id="da_step" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_step }}"></label>
+          <label class="block md:col-span-2"><span class="text-sm text-slate-600">分析コンフィグ JSON</span><input id="da_config" list="hist_da_config" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_config }}"></label>
+        </div>
+        <label class="inline-flex items-center gap-2">
+          <input id="da_emitcsv" type="checkbox" class="w-4 h-4">
+          <span class="text-sm text-slate-700">CSV も出力する（最小限）</span>
+        </label>
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-run-da" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 active:scale-[.99] transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            <span>実行（ダウンロード→解析）</span>
+          </button>
+          <span id="da-status" class="text-sm text-slate-500 self-center"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-analyze" class="glass rounded-2xl p-5 space-y-4 hidden">
+      <div class="text-lg font-semibold">② 解析のみ（既存フォルダ）</div>
+      <div class="grid grid-cols-1 gap-4">
+        <label class="block"><span class="text-sm text-slate-600">対象フォルダ</span><input id="ao_folder" list="hist_ao_folder" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_folder }}"></label>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label class="block"><span class="text-sm text-slate-600">Step 秒（例: 10）</span><input id="ao_step" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_step }}"></label>
+          <label class="block md:col-span-2"><span class="text-sm text-slate-600">分析コンフィグ JSON</span><input id="ao_config" list="hist_ao_config" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ def_config }}"></label>
+        </div>
+        <label class="inline-flex items-center gap-2">
+          <input id="ao_emitcsv" type="checkbox" class="w-4 h-4">
+          <span class="text-sm text-slate-700">CSV も出力する（最小限）</span>
+        </label>
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-run-ao" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300 active:scale-[.99] transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6m6 6V7M4 21h16"/></svg>
+            <span>実行（解析のみ）</span>
+          </button>
+          <span id="ao-status" class="text-sm text-slate-500 self-center"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-results" class="glass rounded-3xl p-6 space-y-5">
+      <div class="text-lg font-semibold">結果</div>
+      
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 shadow-lg">
+          <div class="text-sm text-slate-600 mb-2">four_types 分布</div>
+          <canvas id="chartFourTypes" height="300"></canvas>
+        </div>
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 shadow-lg">
+          <div class="text-sm text-slate-600 mb-2">年齢 分布</div>
+          <canvas id="chartAge" height="300"></canvas>
+        </div>
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 shadow-lg">
+          <div class="text-sm text-slate-600 mb-2">性別 分布</div>
+          <canvas id="chartGender" height="300"></canvas>
+        </div>
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 shadow-lg">
+          <div class="text-sm text-slate-600 mb-2">連続性 概要</div>
+          <canvas id="chartContinuity" height="300"></canvas>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 items-center mb-2">
+        <button id="btn-copy" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white shadow hover:bg-slate-900">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2"/><rect x="8" y="8" width="12" height="12" rx="2" stroke-width="2" stroke="currentColor" fill="none"/></svg>コピー
+        </button>
+        <div id="downloads" class="flex flex-wrap gap-2"></div>
+      </div>
+      <pre id="report" class="whitespace-pre-wrap text-[15px] leading-6"></pre>
+    </section>
+
+    <div id="loading" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden z-50"><div class="absolute inset-0 flex items-center justify-center"><div class="w-12 h-12 border-4 border-white/60 border-t-transparent rounded-full animate-spin"></div></div></div>
+    <div id="toast" class="fixed top-4 right-4 space-y-2 z-50"></div>
+    <footer class="text-center text-xs text-slate-500 py-6">Local-only demo • Flask</footer>
+  </div>
+
+  <script>
+    const ids = ['da_user','da_company','da_start','da_end','da_timezone','da_region','da_keypath','da_step','da_config','ao_folder','ao_step','ao_config'];
+    window.addEventListener('load', () => {
+        ids.forEach(id => { const el=document.getElementById(id); const v=localStorage.getItem('form_'+id); if(el&&v!==null) el.value=v; });
+        const c1 = localStorage.getItem('form_da_emitcsv'); if (c1 !== null) document.getElementById('da_emitcsv').checked = (c1 === '1');
+        const c2 = localStorage.getItem('form_ao_emitcsv'); if (c2 !== null) document.getElementById('ao_emitcsv').checked = (c2 === '1');
+    });
+    ids.forEach(id => { document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id){ localStorage.setItem('form_'+id, e.target.value); } }); });
+    document.getElementById('da_emitcsv').addEventListener('change', e => localStorage.setItem('form_da_emitcsv', e.target.checked?'1':'0'));
+    document.getElementById('ao_emitcsv').addEventListener('change', e => localStorage.setItem('form_ao_emitcsv', e.target.checked?'1':'0'));
+
+
+    const tabDownload = document.getElementById('tab-download'), tabAnalyze  = document.getElementById('tab-analyze');
+    const panelDownload = document.getElementById('panel-download'), panelAnalyze  = document.getElementById('panel-analyze');
+    function showPanel(which){
+      if(which==='download'){ panelDownload.classList.remove('hidden'); panelAnalyze.classList.add('hidden'); tabDownload.classList.replace('bg-slate-700','bg-blue-600'); tabAnalyze.classList.replace('bg-blue-600','bg-slate-700'); }
+      else { panelAnalyze.classList.remove('hidden'); panelDownload.classList.add('hidden'); tabAnalyze.classList.replace('bg-slate-700','bg-blue-600'); tabDownload.classList.replace('bg-blue-600','bg-slate-700'); }
+    }
+    tabDownload.addEventListener('click',()=>showPanel('download')); tabAnalyze.addEventListener('click',()=>showPanel('analyze')); showPanel('download');
+
+    const html = document.documentElement;
+    (function initDark(){ const v = localStorage.getItem('dark')==='1'; html.classList.toggle('dark', v); })();
+    document.getElementById('btn-dark').addEventListener('click', ()=>{ const v=!html.classList.contains('dark'); html.classList.toggle('dark', v); localStorage.setItem('dark', v?'1':'0'); });
+
+    async function copyReport(){
+      const txt = (document.getElementById('report').textContent || '');
+      try{
+        await navigator.clipboard.writeText(txt);
+        showToast("レポートをコピーしました","success");
+      }catch(e){ showToast("コピーに失敗しました","error"); }
+    }
+
+    function showLoading(on){ document.getElementById('loading').classList.toggle('hidden', !on); }
+    function showToast(msg, type="info"){
+      const wrap=document.getElementById('toast');
+      const div=document.createElement('div');
+      const colors={success:'bg-emerald-600', error:'bg-rose-600', info:'bg-slate-700'};
+      div.className = 'text-white '+(colors[type]||colors.info)+' px-4 py-2 rounded-xl shadow-lg transition-all duration-300';
+      div.textContent = msg; wrap.appendChild(div);
+      setTimeout(()=>{ div.classList.add('opacity-0','translate-y-1'); }, 2600);
+      setTimeout(()=>{ if(div.parentNode) wrap.removeChild(div); }, 3000);
+    }
+
+    async function runDownloadAnalyze(){
+      const payload = {
+        user: da_user.value.trim() || null, company: da_company.value.trim() || null,
+        start: da_start.value.trim() || null, end: da_end.value.trim() || null,
+        timezone: da_timezone.value.trim() || null, region: da_region.value.trim() || null,
+        keypath: da_keypath.value.trim() || null, step: da_step.value.trim() || null,
+        config: da_config.value.trim() || null,
+        emit_csv: da_emitcsv.checked
+      };
+      document.getElementById('da-status').textContent = "実行中…"; showLoading(true);
+      try{
+        const res = await fetch('/api/download_analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const data = await res.json();
+        document.getElementById('da-status').textContent = data.ok ? "完了" : "失敗";
+        showResults(data); showToast(data.ok?"解析が完了しました":"解析に失敗しました", data.ok?"success":"error");
+      } finally { showLoading(false); }
+    }
+
+    async function runAnalyzeOnly(){
+      const payload = {
+        folder: ao_folder.value.trim(), step: ao_step.value.trim() || null,
+        config: ao_config.value.trim() || null,
+        emit_csv: ao_emitcsv.checked
+      };
+      document.getElementById('ao-status').textContent = "実行中…"; showLoading(true);
+      try{
+        const res = await fetch('/api/analyze_only', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const data = await res.json();
+        document.getElementById('ao-status').textContent = data.ok ? "完了" : "失敗";
+        showResults(data); showToast(data.ok?"解析が完了しました":"解析に失敗しました", data.ok?"success":"error");
+      } finally { showLoading(false); }
+    }
+
+    function showResults(data){
+      report.textContent = data.report_text || (data.ok ? "レポートが見つかりませんでした。" : (data.error || "エラー"));
+      downloads.innerHTML = "";
+      if (data.files && Array.isArray(data.files)) {
+        data.files.forEach(f => {
+          const a = document.createElement('a');
+          a.href = '/download/' + f.id;
+          a.textContent = f.name;
+          a.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-200 text-slate-800 hover:shadow';
+          downloads.appendChild(a);
+        });
+      }
+      renderCharts(data.summary);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('btn-run-da').addEventListener('click', runDownloadAnalyze);
+      document.getElementById('btn-run-ao').addEventListener('click', runAnalyzeOnly);
+      document.getElementById('btn-copy').addEventListener('click', copyReport);
+    });
+  </script>
+  <style>
+  input, select, textarea {
+    color: #000 !important;   /* 输入文字黑色 */
+    caret-color: #000;        /* 光标颜色（可选） */
+  }
+  input::placeholder {
+    color: #64748b;           /* 占位符颜色（可选） */
+    opacity: 1;
+  }
+  /* 兼容浏览器自动填充也保持黑字（可选） */
+  input:-webkit-autofill { -webkit-text-fill-color: #000; }
+</style>
+<style>
+  .text-slate-400 { color: #684581 !important; }
+</style>
+
+
+  <datalist id="hist_da_user"></datalist>
+  <datalist id="hist_da_company"></datalist>
+  <datalist id="hist_da_start"></datalist>
+  <datalist id="hist_da_end"></datalist>
+  <datalist id="hist_da_config"></datalist>
+  <datalist id="hist_ao_folder"></datalist>
+</body>
+</html>
+
