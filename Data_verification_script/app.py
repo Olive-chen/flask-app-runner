@@ -401,15 +401,22 @@ def download_file(token):
     return send_file(path, as_attachment=False, download_name=os.path.basename(path))
 
 if __name__ == "__main__":
-    import argparse
+    import argparse, os, webbrowser
+
+    # 读取 AWS 注入的 PORT 环境变量（若不存在则用 5050 本地调试）
+    env_port = int(os.environ.get("PORT", 5050))
+
     parser = argparse.ArgumentParser(description="Local web UI for download & analysis")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind (use 0.0.0.0 for LAN access)")
-    parser.add_argument("--port", type=int, default=5050, help="Port to bind")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to bind (default 0.0.0.0 for external access)")
+    parser.add_argument("--port", type=int, default=env_port, help="Port to bind")
     parser.add_argument("--debug", action="store_true", help="Enable Flask debug mode")
     parser.add_argument("--open", action="store_true", help="Open the URL in your browser")
     args = parser.parse_args()
+
     if args.open:
-        host_for_browser = "localhost" if args.host == "0.0.0.0" else args.host
+        host_for_browser = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
         webbrowser.open_new(f"http://{host_for_browser}:{args.port}")
+
     app.run(host=args.host, port=args.port, debug=args.debug)
+
 
