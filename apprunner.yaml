@@ -1,12 +1,20 @@
+# 使用的版本号
 version: 1.0
-runtime: python3
 
+# 1. 指定一个更现代、更明确的 Python 版本
+runtime: python3.11
+
+# 构建阶段的指令
 build:
   commands:
+    # 这个命令保持不变，但在新的 runtime 环境下成功率更高
     build:
-      - pip install --no-cache-dir -r requirements.txt
+      - pip install -r requirements.txt
 
+# 运行阶段的指令
 run:
-  command: python Data_verification_script/app.py
+  # 2. 使用 Gunicorn 启动您的应用，并正确指向子目录中的 app 实例
+  # 格式为 <目录名>.<文件名>:<Flask实例名>
+  command: gunicorn --workers=4 --bind=0.0.0.0:8080 "Data_verification_script.app:app"
   network:
     port: 8080
